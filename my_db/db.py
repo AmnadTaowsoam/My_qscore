@@ -30,12 +30,12 @@ class QSCOREDB():
     def create_qscore_tbl(self):
         create_qscore_sql = """CREATE TABLE qscore (
             ID int NOT NULL IDENTITY(1,1),
-            year int, 
+            vendor varchar(15), 
             material varchar(15), 
-            vendor varchar(15),
+            year int,
+            month int,
             q_score decimal(10,2),
-            lot_count decimal(10,2),
-            date_of_cal datetime 
+            MA decimal(10,2)
             )
             """
         try:
@@ -52,12 +52,12 @@ class QSCOREDB():
             
     def insert_qscore_tbl(self,data):
         insert_qscore_sql = """INSERT INTO qscore (
-            year, 
-            material, 
             vendor, 
-            q_score, 
-            lot_count, 
-            date_of_cal
+            material, 
+            year, 
+            month, 
+            q_score,
+            MA
             ) 
             VALUES (?,?,?,?,?,?)
         """
@@ -82,12 +82,12 @@ class QSCOREDB():
             data = pd.DataFrame((tuple(t) for t in data))
             data = data.rename(columns={
                 0:'ID',
-                1:'year',
+                1:'vendor',
                 2:'material',
-                3:'vendor',
-                4:'q_score',
-                5:'lot_count',
-                6:'date_of_cal'
+                3:'year',
+                4:'month',
+                5:'q_score',
+                6:'MA',
                 })
         except Exception as e:
             self.cursor.rollback()
@@ -106,6 +106,90 @@ class QSCOREDB():
         except Exception as ex:
             print(ex)
             print('truncate_qscore error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
+        else:
+            self.cursor.commit()
+            self.cursor.close()
+            
+    ########################################################################
+    def create_bestqscore_tbl(self):
+        create_bestqscore_sql = """CREATE TABLE bestqscore (
+            ID int NOT NULL IDENTITY(1,1),
+            vendor varchar(15), 
+            material varchar(15), 
+            year int,
+            month int,
+            q_score decimal(10,2),
+            MA decimal(10,2)
+            )
+            """
+        try:
+            self.cursor = self.conn.cursor()
+            self.cursor.execute(create_bestqscore_sql)
+        except Exception as e:
+            self.cursor.rollback()
+            print(e)
+            print('create_bestqscore_sql error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
+        else:
+            print('create_bestqscore_sql successful','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
+            self.cursor.commit()
+            self.cursor.close()
+            
+    def insert_bestqscore_tbl(self,data):
+        insert_bestqscore_sql = """INSERT INTO bestqscore (
+            vendor, 
+            material, 
+            year, 
+            month, 
+            q_score,
+            MA
+            ) 
+            VALUES (?,?,?,?,?,?)
+        """
+        try:
+            self.cursor = self.conn.cursor()
+            self.cursor.execute(insert_bestqscore_sql, data)
+        except Exception as e:
+            self.cursor.rollback()
+            print(e)
+            print('insert_bestqscore_tbl error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
+        else:
+            self.cursor.commit()
+            self.cursor.close()
+            
+    def get_bestqscore_tbl(self):
+        get_bestqscore_sql = """SELECT * from bestqscore
+        """
+        try:
+            self.cursor = self.conn.cursor()
+            self.cursor.execute(get_bestqscore_sql)
+            data = self.cursor.fetchall()
+            data = pd.DataFrame((tuple(t) for t in data))
+            data = data.rename(columns={
+                0:'ID',
+                1:'vendor',
+                2:'material',
+                3:'year',
+                4:'month',
+                5:'q_score',
+                6:'MA'
+                })
+        except Exception as e:
+            self.cursor.rollback()
+            print(e)
+            print('get_bestqscore_tbl error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
+        else:
+            self.cursor.commit()
+            self.cursor.close()
+            return  data
+        
+    def truncate_bestqscore_tbl(self):
+        truncate_bestqscore_sql = """TRUNCATE TABLE bestqscore"""
+        try:
+            self.cursor = self.conn.cursor()
+            self.cursor.execute(truncate_bestqscore_sql)
+        except Exception as ex:
+            print(ex)
+            print('truncate_bestqscore error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
         else:
             self.cursor.commit()
             self.cursor.close()

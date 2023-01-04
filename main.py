@@ -1,12 +1,22 @@
 import datetime
-from my_function.preparation import QSCORE
+import os,shutil
+from my_function.preparation import QSCORE, BestQSCORE
+
+
 
 qscore = QSCORE()
+bqscore = BestQSCORE()
 
 if __name__=="__main__":
+        # try:
+        #     qscore.update_to_qscordb()
+        #     print('Qscore Update successfully','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
+        # except:
+        #     print('Qscore Update error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
+            
         try:
-            qscore.update_to_db()
-            print('Qscore Update successfully','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
+            bqscore.update_to_bestqscordb()
+            print('Best Qscore Update successfully','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
         except:
-            print('Qscore Update error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
+            print('Best Qscore Update error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
             

@@ -17,7 +17,8 @@ class QA32():
             data = input_data.copy()
             ##filter
             data = data.loc[~data['System Status'].str.startswith(('LTCA'))]
-            data = data.loc[data['Inspection Type'] == 1]
+            data = data[(data['Inspection Type'] == 'ZY2')]
+            data = data[ (data['Plant'] != 'E001')]
             return data
         except:
             print('filters_qa32 error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
@@ -29,14 +30,14 @@ class QA32():
                                         'Material':'material',
                                         'Plant':'plant',
                                         'Quality Score':'qscore',
-                                        'Start of Inspection':'date'
+                                        'Lot Created On':'date'
             })
             return data
         except:
             print('col_rename_qa32 error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
         
     def col_sel_qa32(self,input_data):
-        try:   
+        try:    
             ## columns selection
             data = input_data.copy()
             col_list = ['batch','material','plant','qscore','date']
@@ -73,68 +74,52 @@ class QA32():
                     qa32 = self.transform_qa32(qa32_df)
                     combined_data = combined_data.append(qa32,ignore_index=True)
                     print('\t%s' % fname,':transform Successfully','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
-                combined_data.to_excel("./documents/qscore/"+'Summary_qa32.xlsx')
-                print('qa32 processing Successfully','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
+                # combined_data.to_excel("./documents/qscore/"+'Summary_qa32.xlsx')
+                # print('qa32 transform Successfully','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
                 return combined_data
         except:
-            print('qa32 processing error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
+            print('qa32 transform error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
             
 class FEEDM():
     def __init__(self) -> None:
         pass
-    
+      
     def filters_feedm(self,input_data):
         try:
             data = input_data.copy()
-            ##filter
             data = data.fillna(0)
-            data = data[~data['Record Status'].str.contains('CANCL', na=False)]
-            data = data[data['Visiting Purpose Description'] != "โอนย้ายวัตถุดิบ/สินค้า"]
-            data = data[data['Visiting Purpose Description'] != "คืนวัตถุดิบ/สินค้า"]
+            data['Queue Item number'] = data['Queue Item number'].astype(float)
+            data = data[data['Queue Item number'] < 10]
+            data = data[data['QC1 Status - Header'] == "C"]
+            data = data[data['WGIN Overall Status'] == "C"]
+            data = data[data['QC2 Status - Header'] == "C"]
+            data = data[data['WGOUT Overvall Status'] == "C"]
+            data = data[data['GR Status - Header'] == "C"]
+            data = data[data['Queue Type'] != "99"]
+            # feedm = feedm[feedm['Visiting Purpose Description'] != "คืนวัตถุดิบ/สินค้า"]
             data = data[data['Batch'] != 0 ]
             data = data[data['Inspection Lot'] != 0 ]
             data = data[data['Vendor'] != 0 ]
-            return data
-        except:
-            print('filters_feedm error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
-    
-    def col_rename_feedm(self,input_data):
-        try:
-            data = input_data.copy()
+            data = data.loc[data['Material'].str.startswith(("P", "V", "C"))]
+            data = data.loc[~data['Receiving Plant'].str.startswith(('E001'))]
+
             data = data.rename(columns={'Batch':'batch',
-                                        'Material':'material',
-                                        'Receiving Plant':'plant',
-                                        'Vendor':'vendor',
-                                        'Queue Date':'date'
-                                        })
-            return data
-        except:
-            print('col_rename_feedm error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
-    
-    def col_sel_feedm(self,input_data):
-        try:    
-            ## columns selection
-            data = input_data.copy()
+                                            'Material':'material',
+                                            'Receiving Plant':'plant',
+                                            'Vendor':'vendor',
+                                            'Queue Date':'date'
+                                            })
+
             col_list = ['batch','material','plant','vendor','date']
             data = data[col_list]
             return data
         except:
-            print('col_sel_feedm error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
-    
-    def transform_feedm(self,input_data):
-        try:
-            filters_feedm = self.filters_feedm(input_data)
-            col_rename_feedm = self.col_rename_feedm(filters_feedm)
-            col_sel_feedm = self.col_sel_feedm(col_rename_feedm)
-            data = col_sel_feedm
-            return data
-        except:
-            print('transform_feedm error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
-    
+            print('filters_feedm transform error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
+
     def processing_feedm(self):
         try:
             # Set the directory you want to start from
-            rootDir = './documents/rawdata/feedmill_rawdata/'
+            rootDir = './documents/rawdata/feedmill_rawdata'
             for dirName, subdirList, fileList in os.walk(rootDir):
                 print('Found directory: %s' % dirName)
                 combined_data = pd.DataFrame()
@@ -144,16 +129,16 @@ class FEEDM():
                         continue
                     print('\t%s' % fname)
                     # Read the Excel file into a dataframe
-                    feedm_df = pd.read_excel(os.path.join(dirName, fname),sheet_name='Sheet1')
+                    feedm_df = pd.read_excel(os.path.join(dirName, fname))
                     # Do something with the dataframe here
-                    feedm = self.transform_feedm(feedm_df)
+                    feedm = self.filters_feedm(feedm_df)
                     combined_data = combined_data.append(feedm,ignore_index=True)
                     print('\t%s' % fname,':transform Successfully','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
-                combined_data.to_excel("./documents/qscore/"+'Summary_FeedMill.xlsx')
-                print('FeedMill transform Successfully','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
+                # combined_data.to_excel("./documents/qscore/feedmill/"+'Summary_FeedMill_newversion.xlsx')
+                # print('processing_feedm Successfully','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
                 return combined_data
         except:
-            print('FeedMill transform error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
+            print('processing_feedm error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
     
 class NOTI():
     def __init__(self) -> None:
@@ -184,8 +169,8 @@ class NOTI():
         except:
             print('col_rename_noti error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
         
-    def col_sel_noti(self,input_data): 
-        try:   
+    def col_sel_noti(self,input_data):
+        try:    
             ## columns selection
             data = input_data.copy()
             data['nscore'] = 99
@@ -222,9 +207,10 @@ class NOTI():
                     # Do something with the dataframe here
                     feedm = self.transform_noti(feedm_df)
                     combined_data = combined_data.append(feedm,ignore_index=True)
-                    print('\t%s' % fname,':transform Successfully','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
-                combined_data.to_excel("./documents/qscore/"+'Summary_notification.xlsx')
-                print('notification transform Successfully','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
+                    print('\t%s' % fname,':transform Successfully','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')   
+                # combined_data.to_excel("./documents/qscore/"+'Summary_notification.xlsx')
+                # shutil.move('./documents/rawdata/notification_rawdata/','./documents/notification_complete/feedmill_complete/')
+                # print('notification transform Successfully','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
                 return combined_data
         except:
             print('notification transform error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
@@ -234,12 +220,14 @@ class QSCORE:
         self.qa32 = QA32()
         self.feedm = FEEDM()
         self.noti = NOTI()
+        
     def merger(self):
         try:
             qa32 = self.qa32.processing_qa32()
             qa32 = qa32.set_index(['batch','material','plant'])
             feedm = self.feedm.processing_feedm()
             feedm = feedm.set_index(['batch','material','plant'])
+            # feedm = feedm.drop(columns={'Unnamed: 0'})
             noti = self.noti.processing_noti()
             noti = noti.set_index(['batch','material','plant'])
             
@@ -255,33 +243,88 @@ class QSCORE:
             data = data.fillna(0)
             return data
         except:
-            print('merge data befor qscor cal error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
+            print('merger error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
         
     def qscore_calculate(self):
         try:
             data = self.merger()
             data['q_score'] = data['qscore'].astype(float) - data['nscore'].astype(float)
             data['year'] = data['date'].dt.year
+            data['month'] = data['date'].dt.month
             data = data.drop(columns={'qscore','nscore','plant','batch','date'})
-            data = data[data['q_score'] == 100]
-            data['lot_count'] = data['q_score']
-            data = data.groupby(['year','material','vendor','q_score']).count()
-            data = data.reset_index()
-            qscore = data[data['lot_count'] >= 10]
-            qscore['date_of_cal'] = datetime.datetime.now().strftime('%Y-%m-%d')
-            qscore[['material','vendor']] = qscore[['material','vendor']].astype(pd.StringDtype())
-            qscore[['q_score','lot_count']] = qscore[['q_score','lot_count']].astype(float)
-            return qscore
+            data[['material','vendor']] = data[['material','vendor']].astype(pd.StringDtype())
+            data['vendor'] = data['vendor'].str[:9]
+            data = data.groupby(['vendor','material','year','month']).mean().reset_index()
+            data['MA'] = 0
+            return data
         except:
-                print('qscor cal error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
-                
-    def update_to_db(self):
+            print('qscore_calculate error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
+            
+    def checkexit(self):
         try:
-            db.truncate_qscore_tbl()
-            qscore = self.qscore_calculate()
+            ## new data
+            new_qscore = self.qscore_calculate()
+            # ## old data
+            qscore = db.get_qscore_tbl()
+            qscore = qscore.drop(columns={'ID'})
+            # ##Compare Data
+            data = pd.concat([new_qscore,qscore]).drop_duplicates(keep=False)
+            return data
+        except:
+            print('checkexit error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')        
+        
+    def update_to_qscordb(self):
+        try:
+            qscore = self.checkexit()
             for i in range(len(qscore)):
-                qscores = qscores.values.tolist()
+                qscores = qscore.values.tolist()
                 qscores = qscores[i][0],qscores[i][1],qscores[i][2],qscores[i][3],qscores[i][4],qscores[i][5]
                 db.insert_qscore_tbl(qscores)
         except:
-            print('Update Qscore error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
+            print('Update qscore error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
+            
+class BestQSCORE():
+    def __init__(self) -> None:
+        pass
+         
+    def best_qscore(self):
+        try:
+            data = db.get_qscore_tbl()
+            data['MA2'] = data.groupby(['vendor','material'])['q_score'].transform(lambda x: x.rolling(4).mean())
+            data = data.drop(columns={'MA'})
+            data = data.rename(columns={'MA2':'MA'}) 
+            data['yearmonth'] = data['year'].astype(pd.StringDtype()) + data['month'].astype(pd.StringDtype())
+
+            data['yearmonth'] = data['yearmonth'].astype(int)
+            data = data.loc[data.groupby(['vendor','material'])['yearmonth'].idxmax()]
+            data = data[data['MA'] == 100]
+            data = data.drop(columns={'ID','yearmonth'})
+            return data
+        except:
+            print('best_qscore error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
+            
+    def checkexit(self):
+        try:
+            ## new data
+            new_qscore = self.best_qscore()
+            ## old data
+            qscore = db.get_bestqscore_tbl()
+            qscore = qscore.drop(columns={'ID'})
+            ##Compare Data
+            data = pd.concat([new_qscore,qscore]).drop_duplicates(keep=False)
+            return data
+        except:
+            print('checkexit error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
+            
+    def update_to_bestqscordb(self):
+        try:
+            bqscore = self.checkexit()
+            for i in range(len(bqscore)):
+                bqscores = bqscore.values.tolist()
+                bqscores = bqscores[i][0],bqscores[i][1],bqscores[i][2],bqscores[i][3],bqscores[i][4],bqscores[i][5]
+                db.insert_bestqscore_tbl(bqscores)
+                
+            data = db.get_bestqscore_tbl()
+            data.to_excel("D:/Betagro Public Company Limited/QC_AGRO_Data_Report - Master Data/"+"QScoreV01"+".xlsx")
+        except:
+            print('Update bestqscor error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
