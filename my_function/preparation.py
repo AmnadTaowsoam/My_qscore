@@ -69,7 +69,7 @@ class QA32():
                         continue
                     print('\t%s' % fname)
                     # Read the Excel file into a dataframe
-                    qa32_df = pd.read_excel(os.path.join(dirName, fname),sheet_name='Sheet1')
+                    qa32_df = pd.read_excel(os.path.join(dirName, fname))
                     # Do something with the dataframe here
                     qa32 = self.transform_qa32(qa32_df)
                     combined_data = combined_data.append(qa32,ignore_index=True)
@@ -88,27 +88,15 @@ class FEEDM():
         try:
             data = input_data.copy()
             data = data.fillna(0)
-            data['Queue Item number'] = data['Queue Item number'].astype(float)
-            data = data[data['Queue Item number'] < 10]
-            data = data[data['QC1 Status - Header'] == "C"]
-            data = data[data['WGIN Overall Status'] == "C"]
-            data = data[data['QC2 Status - Header'] == "C"]
-            data = data[data['WGOUT Overvall Status'] == "C"]
-            data = data[data['GR Status - Header'] == "C"]
-            data = data[data['Queue Type'] != "99"]
-            # feedm = feedm[feedm['Visiting Purpose Description'] != "คืนวัตถุดิบ/สินค้า"]
-            data = data[data['Batch'] != 0 ]
-            data = data[data['Inspection Lot'] != 0 ]
-            data = data[data['Vendor'] != 0 ]
             data = data.loc[data['Material'].str.startswith(("P", "V", "C"))]
-            data = data.loc[~data['Receiving Plant'].str.startswith(('E001'))]
+            data = data.loc[~data['Queue Registered Plant'].str.startswith(('E001'))]
 
             data = data.rename(columns={'Batch':'batch',
-                                            'Material':'material',
-                                            'Receiving Plant':'plant',
-                                            'Vendor':'vendor',
-                                            'Queue Date':'date'
-                                            })
+                                                        'Material':'material',
+                                                        'Queue Registered Plant':'plant',
+                                                        'Vendor':'vendor',
+                                                        'Queue Date':'date'
+                                                        })
 
             col_list = ['batch','material','plant','vendor','date']
             data = data[col_list]
@@ -203,7 +191,7 @@ class NOTI():
                         continue
                     print('\t%s' % fname)
                     # Read the Excel file into a dataframe
-                    feedm_df = pd.read_excel(os.path.join(dirName, fname),sheet_name='Sheet1')
+                    feedm_df = pd.read_excel(os.path.join(dirName, fname))
                     # Do something with the dataframe here
                     feedm = self.transform_noti(feedm_df)
                     combined_data = combined_data.append(feedm,ignore_index=True)
@@ -215,7 +203,7 @@ class NOTI():
         except:
             print('notification transform error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
             
-class QSCORE:
+class QSCORE():
     def __init__(self) -> None:
         self.qa32 = QA32()
         self.feedm = FEEDM()
@@ -325,6 +313,12 @@ class BestQSCORE():
                 db.insert_bestqscore_tbl(bqscores)
                 
             data = db.get_bestqscore_tbl()
-            data.to_excel("D:/Betagro Public Company Limited/QC_AGRO_Data_Report - Master Data/"+"QScoreV01"+".xlsx")
+            data = data.drop_duplicates()
+            data['yearmonth'] = data['year'].astype(pd.StringDtype()) + data['month'].astype(pd.StringDtype())
+            data['yearmonth'] = data['yearmonth'].astype(int)
+            data = data.loc[data.groupby(['vendor','material'])['yearmonth'].idxmax()]
+            filename = f"QScore{datetime.datetime.now().strftime('%Y%m')}_Evaluat_{datetime.datetime.now().strftime('%Y%m%d')}"
+            data.to_excel("D:/Betagro Public Company Limited/QC_AGRO_Data_Report - Master Data/"+filename+".xlsx")
         except:
             print('Update bestqscor error','(',datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),')')
+            
